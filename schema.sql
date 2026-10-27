@@ -1,0 +1,30 @@
+CREATE DATABASE IF NOT EXISTS student_registration
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE student_registration;
+
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(254) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS student_details (
+    user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    roll_number VARCHAR(30) NOT NULL,
+    dob DATE NOT NULL,
+    gender VARCHAR(30) NOT NULL,
+    course VARCHAR(30) NOT NULL,
+    current_year VARCHAR(20) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    address VARCHAR(300) NOT NULL,
+    hobbies VARCHAR(150) NOT NULL DEFAULT '',
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_student_details_user
+        FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;

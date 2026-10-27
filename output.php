@@ -1,10 +1,20 @@
 <?php
 session_start();
 if (empty($_SESSION['student'])) { header('Location: login.php'); exit; }
-if (empty($_SESSION['submitted_student'])) { header('Location: form.php'); exit; }
-$data = $_SESSION['submitted_student'];
+require_once __DIR__ . '/db.php';
+try {
+    $pdo = database();
+    $statement = $pdo->prepare('SELECT * FROM student_details WHERE user_id = :user_id');
+    $statement->execute(['user_id' => $_SESSION['student']['id']]);
+    $data = $statement->fetch();
+} catch (PDOException $exception) {
+    error_log($exception->getMessage());
+    $_SESSION['database_error'] = 'Could not load your saved details. Check the database configuration and try again.';
+    header('Location: form.php'); exit;
+}
+if (!$data) { header('Location: form.php'); exit; }
 function e($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
-$labels = ['full_name'=>'Full name','roll_number'=>'Roll / registration number','dob'=>'Date of birth','gender'=>'Gender','course'=>'Course','year'=>'Current year','phone'=>'Phone number','address'=>'Address','hobbies'=>'Interests'];
+$labels = ['full_name'=>'Full name','roll_number'=>'Roll / registration number','dob'=>'Date of birth','gender'=>'Gender','course'=>'Course','current_year'=>'Current year','phone'=>'Phone number','address'=>'Address','hobbies'=>'Interests'];
 ?>
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Registration Output</title><style>
@@ -13,5 +23,5 @@ body{font-family:Arial,sans-serif;background:#f1f4f8;margin:0;padding:25px;color
 <h1>Registration Successful</h1><p class="success">Your student details were validated and submitted successfully.</p>
 <h2>Submitted Information</h2><table><?php foreach($labels as $key=>$label): ?><tr><th><?=e($label)?></th><td><?=nl2br(e($data[$key] ?? '—'))?></td></tr><?php endforeach; ?></table>
 <a class="btn" href="form.php">Edit Details</a><a class="btn secondary" href="login.php">Login Page</a>
-<p class="small">Session-only demo: data is temporary and is not saved to a database.</p>
+<p class="small">Your submitted details are saved in the database.</p>
 </main></body></html>

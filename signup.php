@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['users'])) $_SESSION['users'] = [];
+require_once __DIR__ . '/db.php';
 $error = '';
 $name = '';
 $email = '';
@@ -19,16 +19,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Password must be at least 8 characters.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
-    } elseif (isset($_SESSION['users'][$email])) {
-        $error = 'An account with this email already exists in this session.';
     } else {
-        $_SESSION['users'][$email] = [
-            'name' => $name,
-            'password_hash' => password_hash($password, PASSWORD_DEFAULT)
-        ];
-        $_SESSION['signup_message'] = 'Account created. Please log in.';
-        header('Location: login.php');
-        exit;
+        try {
+            $pdo = database();
+            $statement = $pdo->prepare(
+                'INSERT INTO users (name, email, password_hash) VALUES (:name, :email, :password_hash)'
+            );
+            $statement->execute([
+                'name' => $name,
+                'email' => $email,
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            ]);
+            $_SESSION['signup_message'] = 'Account created. Please log in.';
+            header('Location: login.php');
+            exit;
+        } catch (PDOException $exception) {
+            if ($exception->getCode() === '23000') {
+                $error = 'An account with this email already exists.';
+            } else {
+                error_log($exception->getMessage());
+                $error = 'Could not save your account. Check the database configuration and try again.';
+            }
+        }
     }
 }
 function e($value) { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
@@ -54,7 +66,7 @@ body{font-family:Arial,sans-serif;background:#f1f4f8;margin:0;padding:25px;color
 <button type="submit">Sign Up</button>
 </form>
 <p>Already have an account? <a href="login.php">Login</a></p>
-<p class="small">Demo only: accounts are stored in the PHP session, not permanently.</p>
+<p class="small">Your account is saved in the student registration database.</p>
 </main>
 <script>
 const p=document.getElementById('password'), c=document.getElementById('confirm_password'), m=document.getElementById('message');

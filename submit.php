@@ -2,6 +2,7 @@
 session_start();
 if (empty($_SESSION['student'])) { header('Location: login.php'); exit; }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: form.php'); exit; }
+require_once __DIR__ . '/db.php';
 
 $keys = ['full_name','roll_number','dob','gender','course','year','phone','address','hobbies'];
 $data = [];
@@ -24,6 +25,42 @@ if ($errors) {
     $_SESSION['form_old'] = $data;
     header('Location: form.php'); exit;
 }
-$_SESSION['submitted_student'] = $data;
-header('Location: output.php'); exit;
+
+try {
+    $pdo = database();
+    $statement = $pdo->prepare(
+        'INSERT INTO student_details
+            (user_id, full_name, roll_number, dob, gender, course, current_year, phone, address, hobbies)
+         VALUES
+            (:user_id, :full_name, :roll_number, :dob, :gender, :course, :current_year, :phone, :address, :hobbies)
+         ON DUPLICATE KEY UPDATE
+            full_name = VALUES(full_name),
+            roll_number = VALUES(roll_number),
+            dob = VALUES(dob),
+            gender = VALUES(gender),
+            course = VALUES(course),
+            current_year = VALUES(current_year),
+            phone = VALUES(phone),
+            address = VALUES(address),
+            hobbies = VALUES(hobbies)'
+    );
+    $statement->execute([
+        'user_id' => $_SESSION['student']['id'],
+        'full_name' => $data['full_name'],
+        'roll_number' => $data['roll_number'],
+        'dob' => $data['dob'],
+        'gender' => $data['gender'],
+        'course' => $data['course'],
+        'current_year' => $data['year'],
+        'phone' => $data['phone'],
+        'address' => $data['address'],
+        'hobbies' => $data['hobbies'],
+    ]);
+    header('Location: output.php'); exit;
+} catch (PDOException $exception) {
+    error_log($exception->getMessage());
+    $_SESSION['form_old'] = $data;
+    $_SESSION['database_error'] = 'Could not save your details. Check the database configuration and try again.';
+    header('Location: form.php'); exit;
+}
 ?>
